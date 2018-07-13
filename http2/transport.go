@@ -26,6 +26,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"net/textproto"
 
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http2/hpack"
@@ -1206,7 +1207,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	// potentially pollute our hpack state. (We want to be able to
 	// continue to reuse the hpack encoder for future requests)
 	for k, vv := range req.Header {
-		if !httpguts.ValidHeaderFieldName(k) {
+		if !httpguts.ValidHeaderFieldName(k) && k != textproto.MIMEHeaderOrderKey {
 			return nil, fmt.Errorf("invalid HTTP header name %q", k)
 		}
 		for _, v := range vv {
@@ -1289,6 +1290,20 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 
 	if hlSize > cc.peerMaxHeaderListSize {
 		return nil, errRequestHeaderListSize
+	}
+
+	// Add headers to a http.Header structure, so they can be sorted.
+	headers := make(map[string][]string)
+
+	enumerateHeaders(func(name, value string) {
+		headers[strings.ToLower(name)] = append(headers[strings.ToLower(name)], value)
+	})
+
+	// Header list size is ok. Write the headers.
+	for _, kvs := range http.Header(headers).ToSortedKeyValues(nil) {
+		for _, value := range kvs.Values {
+			cc.writeHeader(strings.ToLower(kvs.Key), value)
+		}
 	}
 
 	// Header list size is ok. Write the headers.
