@@ -1306,11 +1306,6 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 		}
 	}
 
-	// Header list size is ok. Write the headers.
-	enumerateHeaders(func(name, value string) {
-		cc.writeHeader(strings.ToLower(name), value)
-	})
-
 	return cc.hbuf.Bytes(), nil
 }
 
