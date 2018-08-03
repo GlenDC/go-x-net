@@ -1298,6 +1298,8 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	enumerateHeaders(func(name, value string) {
 		headers[strings.ToLower(name)] = append(headers[strings.ToLower(name)], value)
 	})
+	headers[textproto.MIMEHeaderOrderKey] = headers[strings.ToLower(textproto.MIMEHeaderOrderKey)]
+	delete(headers, strings.ToLower(textproto.MIMEHeaderOrderKey))
 
 	// Header list size is ok. Write the headers.
 	for _, kvs := range http.Header(headers).ToSortedKeyValues(nil) {
