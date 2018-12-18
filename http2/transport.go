@@ -29,7 +29,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"net/textproto"
 
 	"golang.org/x/net/http/httpguts"
 	"golang.org/x/net/http2/hpack"
