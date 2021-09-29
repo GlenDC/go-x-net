@@ -1489,7 +1489,7 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 	// potentially pollute our hpack state. (We want to be able to
 	// continue to reuse the hpack encoder for future requests)
 	for k, vv := range req.Header {
-		if !httpguts.ValidHeaderFieldName(k) {
+		if !httpguts.ValidHeaderFieldName(k) && k != textproto.MIMEHeaderOrderKey {
 			return nil, fmt.Errorf("invalid HTTP header name %q", k)
 		}
 		for _, v := range vv {
@@ -1602,22 +1602,27 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 		return nil, errRequestHeaderListSize
 	}
 
+	// Add headers to a http.Header structure, so they can be sorted.
+	headers := make(map[string][]string)
+
+	enumerateHeaders(func(name, value string) {
+		headers[strings.ToLower(name)] = append(headers[strings.ToLower(name)], value)
+	})
+	headers[textproto.MIMEHeaderOrderKey] = headers[strings.ToLower(textproto.MIMEHeaderOrderKey)]
+	delete(headers, strings.ToLower(textproto.MIMEHeaderOrderKey))
+
 	trace := httptrace.ContextClientTrace(req.Context())
 	traceHeaders := traceHasWroteHeaderField(trace)
 
 	// Header list size is ok. Write the headers.
-	enumerateHeaders(func(name, value string) {
-		name, ascii := asciiToLower(name)
-		if !ascii {
-			// Skip writing invalid headers. Per RFC 7540, Section 8.1.2, header
-			// field names have to be ASCII characters (just as in HTTP/1.x).
-			return
+	for _, kvs := range http.Header(headers).ToSortedKeyValues(nil) {
+		for _, value := range kvs.Values {
+			cc.writeHeader(strings.ToLower(kvs.Key), value)
+			if traceHeaders {
+				traceWroteHeaderField(trace, strings.ToLower(kvs.Key), value)
+			}
 		}
-		cc.writeHeader(name, value)
-		if traceHeaders {
-			traceWroteHeaderField(trace, name, value)
-		}
-	})
+	}
 
 	return cc.hbuf.Bytes(), nil
 }
