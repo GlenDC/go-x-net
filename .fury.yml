@@ -1,0 +1,5 @@
+builds:
+  - dir: .
+    pack: go
+    env:
+      FURY_BUILD_VERSION: "1.17.1"

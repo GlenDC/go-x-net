@@ -1,0 +1,24 @@
+# https://docs.gitlab.com/ee/ci/yaml/#workflowrules-templates
+include:
+  - template: 'Workflows/Branch-Pipelines.gitlab-ci.yml'
+  - project: OTA-Insight/ci-templates
+    file: .gitlab-ci-generic.yml
+  - project: OTA-Insight/ci-templates
+    file: .gitlab-ci-dockerbuild.yml
+
+default:
+  tags: ['k8s']
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  image: $HELM_DEPLOY_IMAGE_TAG
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "superproxy-go-1-17-1"'
+      when: manual
+  script:
+    - grep -q '\[remote "fury"\]' .git/config  || git remote add fury https://$GEMFURY_GIT_USERNAME:$GEMFURY_GIT_PASSWORD@git.fury.io/otainsight/go-x-net.git
+    - git checkout $CI_COMMIT_REF_NAME && git pull
+    - git push fury $CI_COMMIT_REF_NAME:master -f
