@@ -1548,30 +1548,33 @@ func (cc *ClientConn) encodeHeaders(req *http.Request, addGzipHeader bool, trail
 				if vv[0] == "" {
 					continue
 				}
-			} else if asciiEqualFold(k, "cookie") {
-				// Per 8.1.2.5 To allow for better compression efficiency, the
-				// Cookie header field MAY be split into separate header fields,
-				// each with one or more cookie-pairs.
-				for _, v := range vv {
-					for {
-						p := strings.IndexByte(v, ';')
-						if p < 0 {
-							break
-						}
-						f("cookie", v[:p])
-						p++
-						// strip space after semicolon if any.
-						for p+1 <= len(v) && v[p] == ' ' {
-							p++
-						}
-						v = v[p:]
-					}
-					if len(v) > 0 {
-						f("cookie", v)
-					}
-				}
-				continue
 			}
+			// NOTE: we do not want this,
+			// instead we'll keep the headers exactly as they were
+			// else if asciiEqualFold(k, "cookie") {
+			// 	// Per 8.1.2.5 To allow for better compression efficiency, the
+			// 	// Cookie header field MAY be split into separate header fields,
+			// 	// each with one or more cookie-pairs.
+			// 	for _, v := range vv {
+			// 		for {
+			// 			p := strings.IndexByte(v, ';')
+			// 			if p < 0 {
+			// 				break
+			// 			}
+			// 			f("cookie", v[:p])
+			// 			p++
+			// 			// strip space after semicolon if any.
+			// 			for p+1 <= len(v) && v[p] == ' ' {
+			// 				p++
+			// 			}
+			// 			v = v[p:]
+			// 		}
+			// 		if len(v) > 0 {
+			// 			f("cookie", v)
+			// 		}
+			// 	}
+			// 	continue
+			// }
 
 			for _, v := range vv {
 				f(k, v)
